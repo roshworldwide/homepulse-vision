@@ -1,3 +1,4 @@
 -r requirements.in
 pytest==9.1.1
 httpx==0.28.1
+markdown==3.11.2  # docs/report.pdf export

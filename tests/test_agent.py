@@ -98,3 +98,38 @@ def test_trace_links_actions_to_perception():
     assert "blurry" in iv["evidence"]["quality_issues"]
     vp = next(e for e in s.trace.events if e["type"] == "tool_call" and e["name"] == "verify_pass")
     assert "improve_view" in vp["evidence"]["frame_origin"]
+
+
+def test_repeat_capture_returns_same_frame():
+    from homepulse_vision.agent import tools
+
+    s = _session("nurse_valid")
+    a = tools.capture_snapshot(s, {})
+    b = tools.capture_snapshot(s, {})
+    assert "error" not in b and b["frame_id"] == a["frame_id"]
+
+
+class Quitter:
+    """Analyzes, crops, then stops without deciding."""
+    name = "test-quitter"
+
+    def __init__(self):
+        self.n = 0
+
+    def converse(self, messages, s):
+        self.n += 1
+        if self.n == 1:
+            return _msg(("capture_snapshot", {}))
+        if self.n == 2:
+            return _msg(("analyze_frame", {"frame_id": "f1"}))
+        if self.n == 3:
+            return _msg(("improve_view", {"frame_id": "f1", "op": "crop_upscale"}))
+        if self.n == 4:
+            return _msg(("analyze_frame", {"frame_id": "f2"}))
+        return _msg(text="nothing to do")
+
+
+def test_safety_net_looks_at_every_frame_not_just_the_crop():
+    s = _session("nurse_motion")
+    r = loop.run(s, Quitter())
+    assert r["decision"] == "ASKED_FAMILY" and any(e["type"] == "safety_net" for e in s.trace.events)
