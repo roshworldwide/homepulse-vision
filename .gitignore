@@ -1,0 +1,13 @@
+.venv/
+__pycache__/
+*.pyc
+.pytest_cache/
+models/*.onnx
+models/*.part
+.keys/
+.env
+*.env
+.DS_Store
+build/
+dist/
+docs/eval/_work/
