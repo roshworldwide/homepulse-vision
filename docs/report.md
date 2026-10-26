@@ -377,7 +377,8 @@ AWS Lambda (arm64, 2048 MB, measured 2026-10-26 19:35 IST, 24 warm and cold runs
 
 On Lambda, 24/24 (100%) demo-scenario runs reached the expected decision.
 
-- **Cold start:** the one cold start in the Lambda log window recorded `Init Duration: 1716.76 ms`. Model loading is lazy, so the first agent run on a fresh instance also pays for loading the ONNX models.
+- **Cold start, before the fix:** init took 0.8–2.1 s (`Init Duration` in the Lambda REPORT lines), and the ONNX models loaded lazily. The first `analyze_frame` on a fresh instance therefore took 9.8 s, which the README screenshot shows.
+- **Cold start, after the fix:** the handler now runs one tiny `analyze_frame` during init, when Lambda gives the function a full CPU burst. Init rose to 8.4 s, inside Lambda's 10 s init window, and the first request's perception dropped to 0.72 s. The latency table above was measured before this change.
 - **Memory:** max memory used across invocations was 506 MB of 2048 MB.
 - **Text stage:** the DB text detector is about 9× slower on Lambda than on the local Apple-silicon laptop. Lambda's 2048 MB allocation buys a fraction of the vCPUs, and OpenCV 5's new DNN engine warns that it does not support target selection yet.
 - **Model calls:** Nova 2 Lite Converse calls from inside us-east-1 (p50 545 ms) are faster than from the laptop (p50 843 ms).
