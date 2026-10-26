@@ -110,6 +110,27 @@ def face_hit(faces, box):
     return False
 
 
+_fd_low = None
+
+
+def best_face_score(img, box):
+    """Highest YuNet score (threshold 0.3) inside the drawn face, or anywhere when box is None (empty porch)."""
+    global _fd_low
+    if _fd_low is None:
+        from homepulse_vision.config import model_path
+        _fd_low = cv.FaceDetectorYN.create(model_path("face_detection_yunet_2023mar.onnx"), "", (320, 320), 0.3, 0.3, 50)
+    s = min(1.0, 640 / max(img.shape[:2]))
+    small = cv.resize(img, None, fx=s, fy=s, interpolation=cv.INTER_AREA) if s < 1 else img
+    _fd_low.setInputSize((small.shape[1], small.shape[0]))
+    _, faces = _fd_low.detect(small)
+    best = 0.0
+    for f in faces if faces is not None else []:
+        fb = {"box": (np.asarray(f[:4]) / s).tolist()}
+        if box is None or face_hit([fb], box):
+            best = max(best, float(f[-1]))
+    return round(best, 3)
+
+
 def perception(_args):
     m, pk = load()
     now = m["eval_now"] + 5
@@ -136,6 +157,9 @@ def perception(_args):
             if "backlit" in q:
                 e = enhance.clahe(e)
             row["face_improved"] = row["face_base"] or (e is not a["_work"] and face_hit(presence.detect_faces(e), c["truth"]["face_box"]))
+            row["face_best_score"] = best_face_score(a["_work"], c["truth"]["face_box"])
+        elif c["group"] == "empty":
+            row["face_best_score"] = best_face_score(a["_work"], None)
         if c["truth"].get("sign_lines"):
             lines = c["truth"]["sign_lines"]
             hit = 0

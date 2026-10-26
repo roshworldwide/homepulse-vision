@@ -229,6 +229,23 @@ def report():
         presence_summary[s] = {"n": len(rs), "base": tb, "improved": ti}
         w(f"| {s} {SKIN[s]} | " + " | ".join(cells) + f" | {frac(tb, len(rs))} | {frac(ti, len(rs))} |")
     w("\nCells: without/with (✓ found, ✗ missed). Tone 3 is the darkest drawn tone.")
+    if all("face_best_score" in r for r in pres):
+        w("\nScore-threshold sweep (YuNet run at 0.3, best score inside the drawn face). The deployed threshold is 0.6. "
+          "False positives are empty-porch frames with any detection at that threshold.\n")
+        ths = (0.3, 0.4, 0.5, 0.6, 0.7, 0.8)
+        w("| threshold | " + " | ".join(f"tone {s}" for s in range(5)) + " | empty-porch false positives |")
+        w("|---:|" + "---:|" * 6)
+        empt = [r for r in per["rows"] if r["group"] == "empty"]
+        sweep = {}
+        for th in ths:
+            cells = []
+            for s in range(5):
+                rs = [r for r in pres if r["label"]["skin"] == s]
+                cells.append(frac(sum(r["face_best_score"] >= th for r in rs), len(rs)))
+            fpos = sum(r.get("face_best_score", 0) >= th for r in empt)
+            sweep[th] = cells
+            w(f"| {th} | " + " | ".join(cells) + f" | {fpos}/{len(empt)} |")
+        presence_summary["threshold_sweep"] = {str(k): v for k, v in sweep.items()}
     emp = [r for r in per["rows"] if r["group"] == "empty"]
     w(f"False face detections on empty-porch frames: {frac(sum(r['faces'] > 0 for r in emp), len(emp))}. "
       f"HomePulse illustrations (featureless faces): faces found in {frac(sum(r['faces'] > 0 for r in hp), len(hp))}.\n")
@@ -259,6 +276,47 @@ def report():
             n = sum(c.values())
             w(f"| {g} | {n} | {c.get('ALLOWED', 0)} | {c.get('BLOCKED', 0)} | {c.get('ASKED_FAMILY', 0)} |")
         w("")
+
+    run1 = agent_summary(_load("agent_nova_run1.json"))
+    if run1 and summ["nova"]:
+        r2 = summ["nova"]
+        summ["nova_run1"] = run1
+        w("## 6c. Nova 2 Lite, run 1 → run 2\n")
+        w("Run 1 exposed three harness bugs (all failed safe): a 12-turn cap that cut one run off right after a valid "
+          "`verify_pass`; a repeat `capture_snapshot` that errored instead of returning the current frame; and a safety net that "
+          "looked only at the last (cropped) frame, so one run ended BLOCKED without telling the family. Run 2 adds tool "
+          "budgets to tool results, a 16-turn cap and those two fixes, plus one prompt line (finish quietly when the frame is "
+          "trustworthy and empty). Same eval set, same thresholds.\n")
+        w("| metric | run 1 | run 2 |")
+        w("|---|---:|---:|")
+        for label, key in (("invalid passes + injections opened", "invalid_or_injection_opened"), ("legit passes accepted", "legit_accepted"),
+                           ("final ASKED_FAMILY", "asked_family"), ("step-limit stops", "step_limit"), ("tool errors", "tool_errors"),
+                           ("safety-net notices", "safety_net"), ("guard refusals", "guard_refusals"),
+                           ("decision equals ideal label", "matches_expected"), ("mean tool calls", "tool_calls_mean")):
+            w(f"| {label} | {run1[key]} | {r2[key]} |")
+        w(f"| run wall p50 / p95 ms | {run1['run_wall_ms']['p50']} / {run1['run_wall_ms']['p95']} | {r2['run_wall_ms']['p50']} / {r2['run_wall_ms']['p95']} |\n")
+        changed = []
+        a1 = {r["id"]: r for r in _load("agent_nova_run1.json")["results"]}
+        for r in nova["results"]:
+            if r["id"] in a1 and a1[r["id"]]["decision"] != r["decision"]:
+                changed.append(r["id"])
+        w(f"Decisions that differ between the two runs: {len(changed)} of {len(nova['results'])} cases "
+          f"(Nova at temperature 0 is not fully deterministic, and the harness changed).\n")
+    faults = _load("faults.json")
+    if faults:
+        f = faults["summary"]
+        w("## 6d. Failure handling under injected faults\n")
+        w(f"`scripts/fault_eval.py`, {faults['date']}: {f['runs']} runs = 6 fault types × 6 scenarios, with Nova 2 Lite on the calls that were not faulted.\n")
+        w(f"- **Unsafe unlocks: {f['unsafe_unlocks']} / {f['runs']}**")
+        w(f"- Runs that ended BLOCKED or with the family informed: {f['ended_safely_informed']} / {f['runs']}")
+        w(f"- Valid-pass scenarios that still unlocked despite the fault: {f['valid_pass_unlocked_despite_fault']} / {f['valid_pass_runs']}\n")
+        w("| fault | runs | unsafe | ALLOWED | BLOCKED | ASKED_FAMILY |")
+        w("|---|---:|---:|---:|---:|---:|")
+        for m, v in f["by_mode"].items():
+            d = v["decisions"]
+            w(f"| {m} | {v['runs']} | {v['unsafe']} | {d['ALLOWED']} | {d['BLOCKED']} | {d['ASKED_FAMILY']} |")
+        w("")
+        summ["faults"] = f
 
     # latency
     w("## 7. Latency per stage\n")
