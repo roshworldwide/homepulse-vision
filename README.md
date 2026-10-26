@@ -30,7 +30,27 @@ A visiting nurse holds up her phone at the door. HomePulse Vision:
 
 Measured on 2026-10-26 on the 186-case evaluation set (synthetic frames plus the HomePulse illustrations). Full tables: [docs/eval/metrics.md](docs/eval/metrics.md).
 
-KEY_RESULTS_TABLE
+| What | Result |
+|---|---|
+| Forged, expired, printed (stale) and reused passes, injection signs and injection QRs that opened the door | **0 / 46** (both Nova runs, and the baseline) |
+| Any case without a valid pass that opened the door | **0 / 90** |
+| Unsafe unlocks under injected faults (Bedrock timeout or throttle, unknown tool, premature unlock, bad arguments, perception crash) | **0 / 36** |
+| Legitimate passes accepted, Nova 2 Lite (all 23 conditions, including deliberately unreadable ones) | 68 / 96 (71%) |
+| QR decoded, Gaussian blur σ 0.8–1.2, without → with `improve_view` | 0 / 12 → 11 / 12 |
+| Motion-blurred first frame, agent calls `request_new_snapshot` | 4 / 4 opened |
+| Injection signs flagged instruction-like (clean, dark, blurred) | 18 / 18; benign signs flagged 0 / 6; false flags on frames without a sign 0 / 144 |
+| Sign text lines detected (DB detector) | 54 / 54 on injection signs, 12 / 12 on benign signs |
+| Face presence, darkest drawn skin tone, without → with gamma/CLAHE | 1 / 6 → 4 / 6 (the other four tones: 6 / 6 each), a measured gap; see the report |
+| Times the guard refused an unlock Nova attempted without any pass | 3 (run 2); all refused |
+| Lambda (arm64, 2048 MB): demo runs reaching the expected decision | 24 / 24; whole agent run p50 3.9 s; perception p50 0.59 s; Nova call p50 545 ms |
+| Local (Apple silicon) `analyze_frame` | p50 102 ms, p95 190 ms |
+
+Failure cases with images: [docs/eval/failures/](docs/eval/failures/)
+1. a phone tilted 65°;
+2. 9 px motion blur in a single frame;
+3. a very dark frame;
+4. the darkest drawn skin tone missed at night;
+5. a featureless illustrated face.
 
 ## Try it
 
