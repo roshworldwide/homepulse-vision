@@ -148,15 +148,18 @@ Ring-style doorbell frames burn a logo into the top-left corner and text into th
   - (a) `verify_pass` returned `valid` for a `qr_ref` that `analyze_frame` decoded in this session, within the last 120 s, and the pass id is consumed now; or
   - (b) a family approval for this session exists, carried by an HMAC-signed, 15-minute token that the family phone returns.
 - **The model can't create either.** It cannot pass a token, only a `qr_ref` handle, and it cannot fabricate an approval. Its `reason` argument is logged as `model_reason` with the note "not consulted".
-- **Fail-safe.** If the model errors, times out or reaches the 12-turn limit, the door stays locked and a deterministic safety net sends a family notice.
+- **Fail-safe.** If the model errors, times out, reaches the 16-turn limit, or stops without acting while a person, a pass, text or an unclear frame was seen, the door stays locked and a deterministic safety net sends a family notice.
 
 ### 6.3 Trace evidence
 
-[`traces/`](../traces/README.md) holds three Nova 2 Lite runs as JSON lines, with their annotated frames:
+[`traces/`](../traces/README.md) holds four Nova 2 Lite runs as JSON lines: three recorded locally, with their annotated frames, and one exported from the deployed Lambda's CloudWatch Logs:
 
 - `01-blurry-improve-view-unlock`: blur → `improve_view(crop_upscale)` → QR decoded → verified → guard allows.
 - `02-injection-sign-ask-family`: injection sign → text flagged instruction-like → `ask_family`.
 - `03-forged-qr-blocked`: forged QR → `verify_pass: forged` → BLOCKED.
+- `04-cloudwatch-lambda-nurse_motion`: a run on the deployed Lambda, exported from CloudWatch Logs. Motion blur → `improve_view` fails → `request_new_snapshot` → steady frame → verified → ALLOWED.
+
+The full evaluation adds `docs/eval/agent_nova_traces.jsonl`, with every step of all 186 run-2 cases. In 98 of those runs, an `improve_view` or `request_new_snapshot` call carries quality or QR evidence from the preceding `analyze_frame`.
 
 ## 7. Evaluation
 
@@ -242,7 +245,9 @@ All numbers were measured on 2026-10-26 (IST) with OpenCV 5.0.0. Full tables, pe
 
 YuNet at the deployed threshold of 0.6 found the face in every frame for drawn tones 0, 1, 2 and 4 (6/6 frames each across the six lighting conditions). For the darkest tone (3), it found 1 of 6 without enhancement and 4 of 6 with gamma or CLAHE.
 
-The threshold sweep shows this is not a threshold artefact: even at 0.3, tone 3 is detected in 5/6 frames.
+The threshold sweep shows a score gap. YuNet does find most tone-3 faces, but with lower confidence: at a threshold of 0.3 it finds 5 of 6 frames, with no empty-porch false positives on this set.
+
+We did not lower the deployed threshold after seeing the evaluation. Four empty frames are far too few to estimate the false-positive cost, and the right fix is calibration on real, consented footage, which this project does not have.
 
 | threshold | tone 0 | tone 1 | tone 2 | tone 3 | tone 4 | empty-porch false positives |
 |---:|---:|---:|---:|---:|---:|---:|
