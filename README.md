@@ -80,7 +80,7 @@ Without AWS credentials, `HPV_PLANNER=scripted` swaps Nova for a scripted policy
 ## Evaluate
 
 ```bash
-.venv/bin/python scripts/make_eval_set.py                       # regenerate docs/eval/set (optional; committed)
+HPV_HOMEPULSE_ASSETS=../homepulse/assets .venv/bin/python scripts/make_eval_set.py   # regenerate docs/eval/set (optional; committed)
 .venv/bin/python scripts/run_eval.py perception                 # OpenCV-only metrics, no AWS
 .venv/bin/python scripts/run_eval.py agent --planner nova       # every case through Nova 2 Lite
 .venv/bin/python scripts/run_eval.py agent --planner scripted   # baseline
