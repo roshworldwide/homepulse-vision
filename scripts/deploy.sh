@@ -22,7 +22,8 @@ aws ecr describe-repositories --region "$REGION" --repository-names "$NAME" >/de
   aws ecr create-repository --region "$REGION" --repository-name "$NAME" \
     --image-scanning-configuration scanOnPush=true --image-tag-mutability IMMUTABLE >/dev/null
 aws ecr put-lifecycle-policy --region "$REGION" --repository-name "$NAME" --lifecycle-policy-text \
-  '{"rules":[{"rulePriority":1,"description":"keep last 5","selection":{"tagStatus":"any","countType":"imageCountMoreThan","countNumber":5},"action":{"type":"expire"}}]}' >/dev/null
+  '{"rules":[{"rulePriority":1,"description":"keep last 5","selection":{"tagStatus":"any","countType":"imageCountMoreThan","countNumber":5},"action":{"type":"expire"}}]}' >/dev/null 2>&1 ||
+  echo "   (no permission for ECR lifecycle policy; skipped)"
 
 echo "== build + push $IMAGE (linux/arm64)"
 aws ecr get-login-password --region "$REGION" | docker login --username AWS --password-stdin "$REGISTRY" >/dev/null
@@ -67,7 +68,8 @@ aws lambda wait function-updated-v2 --region "$REGION" --function-name "$NAME"
 
 echo "== logs: 14-day retention"
 aws logs create-log-group --region "$REGION" --log-group-name "/aws/lambda/$NAME" 2>/dev/null || true
-aws logs put-retention-policy --region "$REGION" --log-group-name "/aws/lambda/$NAME" --retention-in-days 14
+aws logs put-retention-policy --region "$REGION" --log-group-name "/aws/lambda/$NAME" --retention-in-days 14 2>/dev/null ||
+  echo "   (no permission for log retention; skipped)"
 
 echo "== reserved concurrency $RESERVED (global cap on parallel runs)"
 aws lambda put-function-concurrency --region "$REGION" --function-name "$NAME" \
