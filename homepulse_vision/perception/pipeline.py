@@ -26,6 +26,11 @@ def analyze(img: np.ndarray, *, mask: bool = True, roi_crop: bool = False) -> di
 
     t = time.perf_counter()
     q = quality.measure(img, overlays)
+    if roi_crop and "blurry" in q["issues"]:
+        # an upscaled crop is smooth by construction; its blur score says nothing about the camera
+        q["issues"].remove("blurry")
+        q["trustworthy"] = not q["issues"]
+        q["note"] = "upscaled crop: blur not assessed"
     timing["quality"] = _ms(t)
 
     t = time.perf_counter()

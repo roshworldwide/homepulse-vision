@@ -23,6 +23,7 @@ async function init() {
     const b = e.target.closest(".sc");
     if (!b) return;
     document.querySelectorAll(".sc").forEach((x) => x.classList.toggle("active", x === b));
+    history.replaceState(null, "", "#scenario=" + b.dataset.id);
     run({ scenario: b.dataset.id });
   });
   $("file").addEventListener("change", (e) => e.target.files[0] && upload(e.target.files[0]));
@@ -42,6 +43,11 @@ async function init() {
       document.body.appendChild(z);
     }
   });
+  const m = location.hash.match(/scenario=([a-z_]+)/);
+  if (m) {
+    const b = document.querySelector(`.sc[data-id="${m[1]}"]`);
+    if (b) b.click();
+  }
 }
 
 function upload(file) {
