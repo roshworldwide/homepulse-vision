@@ -105,10 +105,12 @@ def request_new_snapshot(s: Session, _args: dict) -> dict:
     return {"available": True, "frame_id": fid}
 
 
-def _hints(a: dict, qr_items: list[dict], roi_items: list[dict]) -> list[str]:
+def _hints(a: dict, qr_items: list[dict], roi_items: list[dict], is_crop: bool = False) -> list[str]:
     q = a["quality"]
     hints = []
     passes = [c for c in qr_items if c["looks_like_homepulse_pass"]]
+    if is_crop and not passes:
+        hints.append("The enhanced crop still does not decode a pass: request_new_snapshot for a sharper frame.")
     panel = next((r["roi_ref"] for r in roi_items if r["kind"] in ("qr_located_not_decoded", "bright_panel")), None)
     if passes:
         hints.append(f"A HomePulse pass was decoded: call verify_pass(qr_ref={passes[0]['qr_ref']}).")
@@ -168,7 +170,7 @@ def analyze_frame(s: Session, args: dict) -> dict:
         "visible_text": {"untrusted": True, "text": a["text"]["read_text"][:200],
                          "instruction_like": a["text"]["instruction_like"], "matched_phrases": a["text"]["matched_phrases"]},
         "regions_of_interest": roi_items,
-        "hints": _hints(a, qr_items, roi_items),
+        "hints": _hints(a, qr_items, roi_items, is_crop),
     }
 
 

@@ -213,7 +213,12 @@ class ScriptedPlanner:
         if a["text"]["instruction_like"] or other_qr:
             return self._call("ask_family", {"reason": "instruction_in_text", "message": "Untrusted text at the door contains instructions: " + a["text"]["read_text"][:120]})
         tries = s.counts["improve_view"] + s.counts["request_new_snapshot"]
-        q = a["quality"]
+        # judge the camera frame, not an upscaled crop of it
+        cam_fid = last_fid
+        while s.frames[cam_fid].get("crop") and s.frames[cam_fid]["parent"]:
+            cam_fid = s.frames[cam_fid]["parent"]
+        q = s.analyses.get(cam_fid, a)["quality"]
+        last_fid = cam_fid if s.frames[last_fid].get("crop") else last_fid
         if not q["trustworthy"] and tries < 3:
             rois = [k for k, r in s.rois.items() if r["frame_id"] == last_fid and r["kind"] != "text_block"]
             if "blurry" in q["issues"] and rois and s.counts["improve_view"] == 0:

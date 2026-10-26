@@ -35,6 +35,7 @@ class SceneSpec:
     noise: float = 3.0
     seed: int = 0
     clock: str = "2:14 PM"
+    skin: int | None = None             # index into SKIN; None = random from seed
 
 
 def _qr_image(text: str, border: int = 2) -> np.ndarray:
@@ -102,7 +103,9 @@ def overlay_watermark(img: np.ndarray, clock: str) -> None:
     cv.addWeighted(over, 0.85, img, 0.15, 0, dst=img)
 
 
-def render(spec: SceneSpec) -> np.ndarray:
+def render(spec: SceneSpec, meta: dict | None = None) -> np.ndarray:
+    """Draw the frame. If `meta` is a dict it is filled with ground truth (face box, sign line boxes, skin index)."""
+    meta = {} if meta is None else meta
     rng = np.random.default_rng(spec.seed)
     wall = np.array([130, 150, 170]) + rng.integers(-20, 20, 3)
     img = np.empty((H, W, 3), np.uint8)
@@ -120,11 +123,16 @@ def render(spec: SceneSpec) -> np.ndarray:
 
     if spec.visitor:
         vx = int(rng.integers(260, 400))
-        skin = SKIN[int(rng.integers(len(SKIN)))]
+        si = int(rng.integers(len(SKIN)))
+        si = si if spec.skin is None else spec.skin
+        skin = SKIN[si]
         scrubs = SCRUBS[int(rng.integers(len(SCRUBS)))]
         cv.rectangle(img, (vx - 95, 250), (vx + 95, 560), scrubs, -1)
         cv.rectangle(img, (vx - 70, 560), (vx + 70, 690), (60, 50, 50), -1)
-        draw_face(img, vx, 175, int(rng.integers(58, 72)), skin)
+        fr = int(rng.integers(58, 72))
+        draw_face(img, vx, 175, fr, skin)
+        meta["skin"] = si
+        meta["face_box"] = [int(vx - fr * 0.8), 175 - fr, int(fr * 1.6), 2 * fr]
         if spec.badge:
             cv.rectangle(img, (vx + 20, 300), (vx + 90, 335), (250, 250, 250), -1)
             cv.putText(img, spec.badge, (vx + 24, 323), cv.FONT_HERSHEY_SIMPLEX, 0.4, (120, 60, 20), 1, cv.LINE_AA)
@@ -138,8 +146,12 @@ def render(spec: SceneSpec) -> np.ndarray:
         sh = 30 + lh * len(spec.sign_lines)
         cv.rectangle(img, (sx0, sy0), (sx0 + sw, sy0 + sh), (245, 248, 248), -1)
         cv.rectangle(img, (sx0, sy0), (sx0 + sw, sy0 + sh), (30, 30, 30), 3)
+        meta["sign_lines"] = []
         for i, line in enumerate(spec.sign_lines):
-            cv.putText(img, line, (sx0 + 22, sy0 + 55 + i * lh), cv.FONT_HERSHEY_DUPLEX, 1.05, (20, 20, 20), 2, cv.LINE_AA)
+            org = (sx0 + 22, sy0 + 55 + i * lh)
+            cv.putText(img, line, org, cv.FONT_HERSHEY_DUPLEX, 1.05, (20, 20, 20), 2, cv.LINE_AA)
+            (tw, th), base = cv.getTextSize(line, cv.FONT_HERSHEY_DUPLEX, 1.05, 2)
+            meta["sign_lines"].append({"text": line, "box": [org[0], org[1] - th, tw, th + base]})
 
     if spec.qr_text:
         qr = cv.cvtColor(_qr_image(spec.qr_text), cv.COLOR_GRAY2BGR)
