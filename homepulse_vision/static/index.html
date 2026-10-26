@@ -1,0 +1,98 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>HomePulse Vision</title>
+<meta name="description" content="OpenCV 5 perception decides what a door agent does next; a deterministic guard decides whether the door opens.">
+<link rel="stylesheet" href="/static/styles.css">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%23146356'/%3E%3Ccircle cx='16' cy='16' r='7' fill='none' stroke='white' stroke-width='3'/%3E%3Ccircle cx='16' cy='16' r='2.5' fill='white'/%3E%3C/svg%3E">
+</head>
+<body>
+<header class="top">
+  <div class="brand">
+    <svg class="mark" viewBox="0 0 32 32" aria-hidden="true"><rect width="32" height="32" rx="7"/><circle cx="16" cy="16" r="7" fill="none" stroke="#fff" stroke-width="3"/><circle cx="16" cy="16" r="2.5" fill="#fff"/></svg>
+    <div>
+      <h1>HomePulse Vision</h1>
+      <p class="tag">What the doorbell camera sees decides what the agent does next. A deterministic guard decides whether the door opens.</p>
+    </div>
+  </div>
+  <div class="stack" id="stack">loading…</div>
+</header>
+
+<main class="layout">
+  <aside class="left">
+    <section class="panel">
+      <h2>1 · Pick a doorbell event</h2>
+      <p class="muted small">Frames are drawn by the server at request time (simulated camera). Passes carry a real Ed25519 signature.</p>
+      <div id="scenarios" class="scenarios" role="list"></div>
+    </section>
+    <section class="panel">
+      <h2>…or upload a frame</h2>
+      <label class="drop" id="drop">
+        <input type="file" id="file" accept="image/jpeg,image/png,image/webp">
+        <span><strong>Choose an image</strong> or drop it here</span>
+        <span class="muted small">JPEG, PNG or WebP · up to 4 MB · 4096 px</span>
+      </label>
+    </section>
+    <section class="panel privacy">
+      <h2>Privacy</h2>
+      <ul>
+        <li>Uploaded images are processed in memory and <strong>never stored</strong> or logged.</li>
+        <li>Face detection answers only “is someone there?”. <strong>No face recognition, no identity, no stored faces</strong>; landmarks are discarded.</li>
+        <li>Text and QR content seen by the camera are shown as <strong>untrusted data</strong>. The agent never follows them.</li>
+        <li>The camera, the lock and the family phone are <strong>simulated</strong>.</li>
+      </ul>
+    </section>
+  </aside>
+
+  <section class="right">
+    <div id="empty" class="panel empty">
+      <h2>2 · Watch perception drive the agent</h2>
+      <ol class="how">
+        <li><b>OpenCV 5</b> checks the frame: blur, darkness, backlight, watermark; decodes QR; reads text (DB + CRNN); detects presence (YuNet).</li>
+        <li><b>Nova 2 Lite</b> on Amazon Bedrock plans the next tool call from those measurements. It never sees pixels.</li>
+        <li>If the frame is too poor to trust, the agent <b>improves the view</b> or <b>asks for a new snapshot</b> before deciding.</li>
+        <li><b>unlock_door</b> passes only a deterministic guard: a verified one-time pass seen in this session, or family approval.</li>
+      </ol>
+    </div>
+
+    <div id="busy" class="panel busy" hidden>
+      <div class="spinner" aria-hidden="true"></div>
+      <div><strong>Agent running…</strong><div class="muted small" id="busytext">capture → analyze → decide</div></div>
+    </div>
+
+    <div id="result" hidden>
+      <div id="decision" class="decision"></div>
+      <section class="panel">
+        <h2>What the camera saw <span class="muted small">(OpenCV overlays per analyzed frame)</span></h2>
+        <div id="views" class="views"></div>
+      </section>
+      <section class="panel" id="familyPanel" hidden>
+        <h2>Simulated family phone</h2>
+        <p id="familyMsg" class="familymsg"></p>
+        <div class="row">
+          <button class="btn ok" id="approve">Approve entry</button>
+          <button class="btn no" id="deny">Decline</button>
+        </div>
+        <div id="familyOut" class="small"></div>
+      </section>
+      <section class="panel">
+        <div class="row between">
+          <h2>Agent trace <span class="muted small">perception → decision → action</span></h2>
+          <label class="small"><input type="checkbox" id="rawToggle"> raw JSON</label>
+        </div>
+        <ol id="trace" class="trace"></ol>
+        <pre id="raw" class="raw" hidden></pre>
+      </section>
+    </div>
+  </section>
+</main>
+
+<footer class="foot">
+  Built for the OpenCV AI Competition 2026 · builds on <a href="https://github.com/roshworldwide/homepulse">github.com/roshworldwide/homepulse</a> ·
+  <a href="https://github.com/roshworldwide/homepulse-vision">source</a> · MIT
+</footer>
+<script src="/static/app.js"></script>
+</body>
+</html>
