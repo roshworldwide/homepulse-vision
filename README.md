@@ -11,6 +11,8 @@ Entry for the OpenCV AI Competition 2026, powered by AWS. Builds on [github.com/
 
 The camera, the lock and the family phone are **simulated**. Every demo frame is drawn by the server and labelled `SIMULATED`.
 
+![The live demo: a blurry pass, decoded after the agent crops and upscales the QR region, then verified and allowed](docs/img/ui-blurry-pass.png)
+
 ![Architecture](docs/architecture.svg)
 
 ## What it does
