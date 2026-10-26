@@ -32,6 +32,8 @@ def main() -> int:
     ap.add_argument("--chrome", default="/Applications/Google Chrome.app/Contents/MacOS/Google Chrome")
     args = ap.parse_args()
     md = (DOCS / "report.md").read_text()
+    # python-markdown needs 4-space nesting (GitHub accepts 2)
+    md = "\n".join(("  " + l) if l.startswith("  - ") else l for l in md.splitlines())
     body = markdown.markdown(md, extensions=["tables", "fenced_code", "toc"])
     html = DOCS / "_report.html"
     html.write_text(f"<!doctype html><html><head><meta charset='utf-8'><title>HomePulse Vision report</title>"
