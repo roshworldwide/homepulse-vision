@@ -63,6 +63,10 @@ def main() -> None:
                      f"frames: " + ", ".join(f"[frame {k + 1}]({slug}-frame{k + 1}.jpg)" for k in range(len(s.views))) +
                      f" · [trace]({slug}.jsonl)\n\n" + "\n".join(steps) + f"\n\nAgent's message: “{r['summary']}”\n")
         print(slug, r["decision"], f"attempts={attempt + 1}")
+    index.append("## 04-cloudwatch-lambda-nurse_motion\n\nThe same event stream as it was written by the deployed Lambda, exported "
+                 "from CloudWatch Logs with `scripts/export_cloudwatch_trace.py nurse_motion`: heavy motion blur → `improve_view` "
+                 "does not decode the pass → `request_new_snapshot` → steady frame → `verify_pass` valid → guard allows → ALLOWED. "
+                 "Each line keeps its CloudWatch timestamp and log stream. [trace](04-cloudwatch-lambda-nurse_motion.jsonl)\n")
     (OUT / "README.md").write_text("\n".join(index))
 
 

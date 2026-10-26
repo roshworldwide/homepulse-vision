@@ -42,3 +42,7 @@ Result: **BLOCKED** (pass rejected: forged) · attempts: 1 · frames: [frame 1](
 4. `ask_family("reason": "invalid_pass", "message": "A forged HomePulse pass was presented at the door.")` — because `{"instruction_like_text": false, "matched_phrases": [], "faces": 1, "quality_issues": [], "invalid_pass_reasons": ["forged"]}`
 
 Agent's message: “The door remains locked. I have reported the forged HomePulse pass to the family; they will decide whether to unlock the door.”
+
+## 04-cloudwatch-lambda-nurse_motion
+
+The same event stream as it was written by the deployed Lambda, exported from CloudWatch Logs with `scripts/export_cloudwatch_trace.py nurse_motion`: heavy motion blur → `improve_view` does not decode the pass → `request_new_snapshot` → steady frame → `verify_pass` valid → guard allows → ALLOWED. Each line keeps its CloudWatch timestamp and log stream. [trace](04-cloudwatch-lambda-nurse_motion.jsonl)
